@@ -4,11 +4,15 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using HtmlAgilityPack;
+using Id3;
+using TagLib;
+using File = System.IO.File;
 
 namespace AnanmananMp3Downloader
 {
@@ -101,7 +105,7 @@ namespace AnanmananMp3Downloader
                     downloaded++;
                     continue;
                 }
-                
+
                 Console.WriteLine("Sleeping for 3 seconds...");
                 Thread.Sleep(3000);
                 Console.WriteLine("Downloading song page");
@@ -129,8 +133,13 @@ namespace AnanmananMp3Downloader
                 var songDownloadUrl = "http://www.topsinhalamp3.com/downloads/get-mp3.php?type=mp3&mp3id=" + song.Id;
                 Console.WriteLine("Sleeping for 3 seconds...");
                 Thread.Sleep(3000);
+                Console.WriteLine("Downloading song...");
                 DownloadFile(songDownloadUrl, songSavePath);
-                downloaded++;
+                Console.WriteLine("Sleeping for 3 seconds...");
+                Thread.Sleep(3000);
+                Console.WriteLine("Removing tags...");
+                RemoveTags(songSavePath, "topsinhalamp3", new[] { "[www.topsinhalamp3.com]", "www.topsinhalamp3.com", "topsinhalamp3.com", "topsinhalamp3" });
+                Console.WriteLine("done!");
             }
 
             Console.WriteLine();
@@ -138,6 +147,26 @@ namespace AnanmananMp3Downloader
 
             Console.WriteLine($"{downloaded} songs downloaded from {allSongs.Count} songs");
 
+        }
+
+        public static void RemoveTags(string songSavePath, string baseSearch, string[] tagsParts)
+        {
+            var songFile = TagLib.File.Create(songSavePath);
+            var tags = songFile.Tag;
+            var type = tags.GetType();
+            var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+
+            foreach (var property in properties)
+            {
+                var val = property.GetValue(tags, null);
+                if (!(val is string) || !val.ToString().Contains(baseSearch)) continue;
+
+                var newVal = val.ToString();
+                newVal = tagsParts.Aggregate(newVal, (current, tagsPart) => current.Replace(tagsPart, ""));
+                property.SetValue(tags, newVal);
+            }
+
+            songFile.Save();
         }
 
         private static void DownloadSong(string name, string url, string savePath)
