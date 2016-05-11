@@ -25,13 +25,16 @@ namespace AnanmananMp3Downloader
 
             Console.WriteLine("Please enter url which contains download links (Artist page): ");
             var page = Console.ReadLine();
-            Debug.Assert(page != null, "page != null");
-
+            if (page == null)
+            {
+                Console.WriteLine("Page url cannot be null.");
+                return;
+            }
+            
             Console.WriteLine("\nPlease enter song download location (content): ");
             var savePath = Console.ReadLine();
-            if (savePath == "") savePath = "content";
-
-            Debug.Assert(savePath != null, "savePath != null");
+            if (string.IsNullOrEmpty(savePath)) savePath = "content";
+            
             if (!Directory.Exists(savePath))
                 Directory.CreateDirectory(savePath);
 
@@ -61,7 +64,7 @@ namespace AnanmananMp3Downloader
                 return true;
             };
             var baseSongPagePath = "http://www.topsinhalamp3.com/songs/";
-            var baseSongDownloadPath = "http://www.topsinhalamp3.com/music-downloads/";
+            var baseSongDownloadPaths = new string[] { "http://www.topsinhalamp3.com/music-downloads/", "http://www.topsinhalamp3.com/mp3-downloads/" };
             var currentPage = page;
             var allSongs = new List<SinhalaSong>();
             var pageCount = 0;
@@ -110,12 +113,15 @@ namespace AnanmananMp3Downloader
                 Thread.Sleep(3000);
                 Console.WriteLine("Downloading song page");
                 var doc = hw.Load(song.Url);
+                //var allLinks = (from link in doc.DocumentNode.SelectNodes("//a[@href]")
+                //    let href2 = new Uri(new Uri(page), link.Attributes["href"].Value).AbsoluteUri.ToLower()
+                //    select href2).ToArray();
                 var songUrl =
                     (from link in doc.DocumentNode.SelectNodes("//a[@href]")
                      let href2 = new Uri(new Uri(page), link.Attributes["href"].Value).AbsoluteUri.ToLower()
-                     where href2.StartsWith(baseSongDownloadPath)
+                     where baseSongDownloadPaths.Any(href2.StartsWith)
                      select href2).FirstOrDefault();
-
+                //var url = allLinks.FirstOrDefault(u => u.StartsWith("http://www.topsinhalamp3.com/mp3-downloads/"));
                 if (songUrl == null)
                 {
                     Console.WriteLine($"Song id not found for {song.Name}");
